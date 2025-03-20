@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const tablesContainer = document.getElementById('tablesContainer');
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
+    
+    // Add a variable to store processed data
+    let processedStudentData = null;
 
     loadDataBtn.addEventListener('click', loadExcelFiles);
 
@@ -22,6 +25,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(() => {
                 // Hide loading indicator when both are done
                 loading.style.display = 'none';
+                // Show a success message instead of displaying the data
+                showSuccess("Data processed successfully. The most recent student data has been stored.");
             })
             .catch(error => {
                 console.error('Error processing files:', error);
@@ -29,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Function to load and process the overallData.xlsx file (existing functionality)
+    // Function to load and process the overallData.xlsx file (modified functionality)
     function loadAndProcessOverallData() {
         return fetch('overallData.xlsx')
             .then(response => {
@@ -62,10 +67,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Process and filter the data to keep only most recent attempts
-                    const processedData = processStudentScores(jsonData);
+                    processedStudentData = processStudentScores(jsonData);
                     
-                    // Create table with the processed data
-                    createScoreTable(processedData);
+                    // We no longer call createScoreTable here
+                    // Instead, just log a message to confirm data was processed
+                    console.log(`Processed ${processedStudentData.length} student records (most recent attempts only)`);
+                    
+                    // If you want to store this data for later server-side use, you could:
+                    // 1. Store in localStorage (client-side only)
+                    // localStorage.setItem('processedStudentData', JSON.stringify(processedStudentData));
+                    
+                    // 2. Send to a server endpoint (would require backend implementation)
+                    // Example only - not implemented:
+                    // fetch('/api/store-processed-data', {
+                    //     method: 'POST',
+                    //     headers: {'Content-Type': 'application/json'},
+                    //     body: JSON.stringify(processedStudentData)
+                    // });
                     
                 } catch (error) {
                     console.error('Error processing overallData.xlsx:', error);
@@ -301,6 +319,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showError(message) {
+        loading.style.display = 'none';
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = message;
+    }
+
+    function showSuccess(message) {
         loading.style.display = 'none';
         errorDiv.style.display = 'block';
         errorDiv.textContent = message;
