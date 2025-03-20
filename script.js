@@ -159,7 +159,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const questionCode = row['Question Code'];
             const key = `${studentName}-${questionCode}`;
             const submissionTime = new Date(row['SubmissionTime']);
-            const studentClass = row['Class'] || 'Unknown'; // Extract class information
+            
+            // Extract class from student name instead of relying on a separate Class column
+            const studentClass = extractClassFromName(studentName);
             
             // If this is the first attempt for this student-question pair, or it's more recent than previous attempts
             if (!mostRecentAttempts.has(key) || 
@@ -170,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     questionCode: questionCode,
                     score: row['Score'],
                     submissionTime: submissionTime,
-                    class: studentClass // Store class information
+                    class: studentClass // Store extracted class information
                 });
             }
         });
@@ -212,8 +214,8 @@ document.addEventListener('DOMContentLoaded', function() {
         defaultClassOption.textContent = 'All Classes';
         classSelect.appendChild(defaultClassOption);
         
-        // Add options for each class
-        uniqueClasses.forEach(className => {
+        // Add options for each class (sorted)
+        uniqueClasses.sort().forEach(className => {
             const option = document.createElement('option');
             option.value = className;
             option.textContent = className;
@@ -563,7 +565,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Helper function to get a student's class
     function getStudentClass(studentName) {
+        // First check if we have this student in our processed data
         const studentRecord = processedStudentData.find(item => item.studentName === studentName);
-        return studentRecord ? studentRecord.class : 'Unknown';
+        if (studentRecord && studentRecord.class) {
+            return studentRecord.class;
+        }
+        
+        // If not found in the data or class is not available, extract it from the name
+        return extractClassFromName(studentName);
+    }
+
+    // Extract class from student name
+    function extractClassFromName(studentName) {
+        // Check if the name follows the expected format
+        const nameParts = studentName.trim().split(' ');
+        
+        // If the first part is a class identifier (like "5E" or "5A")
+        if (nameParts.length >= 1 && /^[0-9][A-F]$/.test(nameParts[0])) {
+            return nameParts[0]; // Return the class part
+        }
+        
+        return 'Unknown'; // Default return if format doesn't match
     }
 });
