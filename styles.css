@@ -253,6 +253,7 @@ thead th.student-score-column {
 
 /* Student filter styling */
 .filter-container {
+    position: relative;
     margin-bottom: 15px;
     display: flex;
     justify-content: center;
@@ -298,4 +299,27 @@ thead th.student-score-column {
 
 .clear-filter:hover {
     color: #e74c3c;
+}
+
+/* Class filter styling */
+.class-filter-container {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.class-filter {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 200px;
+    margin-left: 10px;
+}
+
+.class-filter:focus {
+    border-color: #2c3e50;
+    outline: none;
+    box-shadow: 0 0 3px rgba(44, 62, 80, 0.3);
 }

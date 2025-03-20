@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add variables to store processed data
     let processedStudentData = null;
     let uniqueStudents = [];
+    let uniqueClasses = []; // New variable to store unique classes
     let layoutData = {};
     
     loadDataBtn.addEventListener('click', loadExcelFiles);
@@ -158,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const questionCode = row['Question Code'];
             const key = `${studentName}-${questionCode}`;
             const submissionTime = new Date(row['SubmissionTime']);
+            const studentClass = row['Class'] || 'Unknown'; // Extract class information
             
             // If this is the first attempt for this student-question pair, or it's more recent than previous attempts
             if (!mostRecentAttempts.has(key) || 
@@ -167,10 +169,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     studentName: studentName,
                     questionCode: questionCode,
                     score: row['Score'],
-                    submissionTime: submissionTime
+                    submissionTime: submissionTime,
+                    class: studentClass // Store class information
                 });
             }
         });
+        
+        // Extract unique classes
+        uniqueClasses = [...new Set(Array.from(mostRecentAttempts.values()).map(item => item.class))].sort();
         
         // Convert map back to array
         return Array.from(mostRecentAttempts.values());
@@ -187,7 +193,37 @@ document.addEventListener('DOMContentLoaded', function() {
         heading.textContent = 'Select a Student';
         selectorSection.appendChild(heading);
         
-        // Add this inside the createStudentSelector function, after creating the heading
+        // Create class filter dropdown
+        const classFilterContainer = document.createElement('div');
+        classFilterContainer.className = 'class-filter-container';
+        
+        const classLabel = document.createElement('label');
+        classLabel.textContent = 'Filter by Class: ';
+        classLabel.htmlFor = 'classFilter';
+        classFilterContainer.appendChild(classLabel);
+        
+        const classSelect = document.createElement('select');
+        classSelect.id = 'classFilter';
+        classSelect.className = 'class-filter';
+        
+        // Add default "All Classes" option
+        const defaultClassOption = document.createElement('option');
+        defaultClassOption.value = '';
+        defaultClassOption.textContent = 'All Classes';
+        classSelect.appendChild(defaultClassOption);
+        
+        // Add options for each class
+        uniqueClasses.forEach(className => {
+            const option = document.createElement('option');
+            option.value = className;
+            option.textContent = className;
+            classSelect.appendChild(option);
+        });
+        
+        classFilterContainer.appendChild(classSelect);
+        selectorSection.appendChild(classFilterContainer);
+        
+        // Add filter container (existing)
         const filterContainer = document.createElement('div');
         filterContainer.className = 'filter-container';
 
@@ -200,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         filterContainer.appendChild(filterInput);
         selectorSection.appendChild(filterContainer);
 
-        // Add this after creating the filter input
+        // Add clear button (existing)
         const clearButton = document.createElement('button');
         clearButton.type = 'button';
         clearButton.className = 'clear-filter';
@@ -210,18 +246,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         clearButton.addEventListener('click', function() {
             filterInput.value = '';
-            filterStudents('', select);
+            filterStudents('', '', select);
             this.style.display = 'none';
         });
 
         filterInput.addEventListener('input', function() {
             clearButton.style.display = this.value ? 'block' : 'none';
-            filterStudents(this.value.toLowerCase(), select);
+            filterStudents(this.value.toLowerCase(), classSelect.value, select);
         });
 
         filterContainer.appendChild(clearButton);
 
-        // Create select element
+        // Create select element for students
         const select = document.createElement('select');
         select.id = 'studentSelect';
         select.className = 'student-select';
@@ -237,6 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = studentName;
             option.textContent = studentName;
+            option.dataset.class = getStudentClass(studentName);
             select.appendChild(option);
         });
         
@@ -250,9 +287,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Add this before appending the select element
-        filterInput.addEventListener('input', function() {
-            filterStudents(this.value.toLowerCase(), select);
+        // Add event listener for class filter
+        classSelect.addEventListener('change', function() {
+            filterStudents(filterInput.value.toLowerCase(), this.value, select);
         });
 
         selectorSection.appendChild(select);
@@ -490,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to filter students based on input text
-    function filterStudents(filterText, selectElement) {
+    function filterStudents(filterText, classFilter, selectElement) {
         const options = selectElement.querySelectorAll('option');
         let visibleCount = 0;
         
@@ -498,8 +535,10 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let i = 1; i < options.length; i++) {
             const option = options[i];
             const studentName = option.textContent.toLowerCase();
+            const studentClass = option.dataset.class;
             
-            if (filterText === '' || studentName.includes(filterText)) {
+            if ((filterText === '' || studentName.includes(filterText)) &&
+                (classFilter === '' || studentClass === classFilter)) {
                 option.style.display = '';
                 visibleCount++;
             } else {
@@ -520,5 +559,11 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (existingMessage) {
             existingMessage.remove();
         }
+    }
+    
+    // Helper function to get a student's class
+    function getStudentClass(studentName) {
+        const studentRecord = processedStudentData.find(item => item.studentName === studentName);
+        return studentRecord ? studentRecord.class : 'Unknown';
     }
 });
