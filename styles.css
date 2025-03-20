@@ -192,3 +192,61 @@ footer {
 thead th.student-score-column {
     background-color: #34495e;
 }
+
+/* New styles to add to styles.css */
+
+/* Make tables display in a grid layout */
+.tables-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+/* Resize the layout tables sections */
+.layout-results {
+    flex: 0 0 calc(25% - 15px); /* Take up approximately 25% of the space, accounting for gap */
+    margin-top: 20px;
+    margin-bottom: 15px;
+    padding: 12px;
+    min-width: 200px; /* Ensure minimum width for readability */
+}
+
+/* Adjust table sizing */
+.sheet-table {
+    width: 100%;
+    font-size: 0.85em;
+    margin-top: 10px;
+}
+
+.sheet-table th, 
+.sheet-table td {
+    padding: 6px 8px;
+    word-break: break-word;
+}
+
+/* Make headings smaller */
+.layout-results h2 {
+    font-size: 1em;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+/* Make sure student selector spans the whole width */
+.student-selector {
+    flex-basis: 100%;
+    margin-bottom: 15px;
+}
+
+/* Media query for smaller screens */
+@media (max-width: 1024px) {
+    .layout-results {
+        flex: 0 0 calc(50% - 15px); /* Take up 50% on medium-sized screens */
+    }
+}
+
+@media (max-width: 640px) {
+    .layout-results {
+        flex: 0 0 100%; /* Full width on small screens */
+    }
+}
