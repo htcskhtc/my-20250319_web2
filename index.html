@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Score Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- SheetJS library for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Student Score Tracker</h1>
+    </header>
+    
+    <main>
+        <section class="file-upload">
+            <h2>Import Student Data</h2>
+            <p>Select the overallData.xlsx file to display student scores</p>
+            <input type="file" id="fileUpload" accept=".xlsx, .xls" />
+        </section>
+        
+        <section class="results">
+            <h2>Student Scores (Most Recent Attempts)</h2>
+            <div class="loading" id="loading" style="display: none;">Processing data...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            <table id="resultsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Question Code</th>
+                        <th>Score</th>
+                        <th>Submission Time</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    
+    <footer>
+        <p>Student Score Tracker - GitHub Pages Demo</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
