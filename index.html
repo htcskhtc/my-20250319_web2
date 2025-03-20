@@ -15,28 +15,18 @@
     
     <main>
         <section class="file-upload">
-            <h2>Student Data</h2>
-            <p>Click the button below to load and display student scores</p>
-            <button id="loadDataBtn" class="btn">Load Data</button>
+            <h2>Import Excel File</h2>
+            <p>Click the button below to load and display data from outputLayout.xlsx</p>
+            <button id="loadDataBtn" class="btn">Import Excel</button>
         </section>
         
-        <section class="results">
-            <h2>Student Scores (Most Recent Attempts)</h2>
+        <section class="loading-section">
             <div class="loading" id="loading" style="display: none;">Processing data...</div>
             <div id="error" class="error" style="display: none;"></div>
-            <table id="resultsTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>Question Code</th>
-                        <th>Score</th>
-                        <th>Submission Time</th>
-                    </tr>
-                </thead>
-                <tbody id="resultsBody">
-                    <!-- Data will be inserted here -->
-                </tbody>
-            </table>
+        </section>
+
+        <section id="tablesContainer" class="tables-container">
+            <!-- Dynamic tables will be inserted here -->
         </section>
     </main>
     

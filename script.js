@@ -1,24 +1,23 @@
 document.addEventListener('DOMContentLoaded', function() {
     const loadDataBtn = document.getElementById('loadDataBtn');
-    const resultsTable = document.getElementById('resultsTable');
-    const resultsBody = document.getElementById('resultsBody');
+    const tablesContainer = document.getElementById('tablesContainer');
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
 
-    loadDataBtn.addEventListener('click', loadDataFromServer);
+    loadDataBtn.addEventListener('click', loadExcelFile);
 
-    // Function to load data from server
-    function loadDataFromServer() {
+    // Function to load and process the Excel file
+    function loadExcelFile() {
         // Show loading indicator
         loading.style.display = 'block';
-        resultsTable.style.display = 'none';
+        tablesContainer.innerHTML = ''; // Clear previous tables
         errorDiv.style.display = 'none';
         
         // Fetch the Excel file from the server
-        fetch('overallData.xlsx')
+        fetch('outputLayout.xlsx')
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Failed to load the Excel file from server');
+                    throw new Error('Failed to load outputLayout.xlsx from server');
                 }
                 return response.arrayBuffer();
             })
@@ -27,23 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const data = new Uint8Array(arrayBuffer);
                     const workbook = XLSX.read(data, { type: 'array' });
                     
-                    // Assume the first sheet contains our data
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // Convert to JSON
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    if (jsonData.length === 0) {
-                        showError('No data found in the Excel file');
+                    // Check if we have sheets
+                    if (workbook.SheetNames.length === 0) {
+                        showError('No sheets found in the Excel file');
                         return;
                     }
                     
-                    // Process the data to keep only the most recent attempts
-                    const processedData = processStudentData(jsonData);
-                    
-                    // Display the processed data
-                    displayResults(processedData);
+                    // Process each sheet in the workbook
+                    processAllSheets(workbook);
                     
                 } catch (error) {
                     console.error('Error processing file:', error);
@@ -56,94 +46,96 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    function processStudentData(data) {
-        // Create a map to store the most recent attempt for each student-question pair
-        const studentMap = new Map();
-        
-        // Process each record
-        data.forEach(record => {
-            // Expected column names from the requirements
-            const studentName = record['Std Name'];
-            const questionCode = record['Question Code'];
-            const score = record['Score'];
-            const submissionTime = record['SubmissionTime'];
+    function processAllSheets(workbook) {
+        // Process each sheet and create tables
+        workbook.SheetNames.forEach(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
             
-            if (!studentName || !questionCode || score === undefined || !submissionTime) {
-                console.warn('Skipping record with missing data:', record);
+            // Convert to JSON
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            if (jsonData.length === 0) {
+                console.warn(`No data found in sheet: ${sheetName}`);
                 return;
             }
             
-            // Create a unique key for each student-question pair
-            const key = `${studentName}-${questionCode}`;
-            
-            // Parse the submission time
-            const submissionDate = new Date(submissionTime);
-            
-            // If this student-question pair already exists, compare submission times
-            if (studentMap.has(key)) {
-                const existingRecord = studentMap.get(key);
-                const existingDate = new Date(existingRecord.submissionTime);
-                
-                // Keep only the most recent record
-                if (submissionDate > existingDate) {
-                    studentMap.set(key, {
-                        studentName,
-                        questionCode,
-                        score,
-                        submissionTime
-                    });
-                }
-            } else {
-                // First record for this student-question pair
-                studentMap.set(key, {
-                    studentName,
-                    questionCode,
-                    score,
-                    submissionTime
-                });
-            }
+            // Create a table for this sheet
+            createSheetTable(sheetName, jsonData);
         });
         
-        // Convert the map values to array
-        return Array.from(studentMap.values());
+        // Hide loading indicator
+        loading.style.display = 'none';
     }
 
-    function displayResults(data) {
-        // Clear previous results
-        resultsBody.innerHTML = '';
+    function createSheetTable(sheetName, data) {
+        // Create a section for this table
+        const tableSection = document.createElement('section');
+        tableSection.className = 'results';
         
-        // Create table rows for each record
-        data.forEach(record => {
+        // Create heading with sheet name
+        const heading = document.createElement('h2');
+        heading.textContent = sheetName;
+        tableSection.appendChild(heading);
+        
+        // Create table
+        const table = document.createElement('table');
+        table.className = 'sheet-table';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        // Use the first row as header, but only the first two columns
+        if (data[0] && data[0].length > 0) {
+            // Create headers for first two columns
+            for (let i = 0; i < Math.min(2, data[0].length); i++) {
+                const th = document.createElement('th');
+                th.textContent = data[0][i] || `Column ${i+1}`;
+                headerRow.appendChild(th);
+            }
+        } else {
+            // Default headers if first row is empty
+            const th1 = document.createElement('th');
+            th1.textContent = 'Column 1';
+            headerRow.appendChild(th1);
+            
+            const th2 = document.createElement('th');
+            th2.textContent = 'Column 2';
+            headerRow.appendChild(th2);
+        }
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        // Add data rows (skip the header row)
+        for (let i = 1; i < data.length; i++) {
             const row = document.createElement('tr');
             
-            // Create cells for each column
-            const nameCell = document.createElement('td');
-            nameCell.textContent = record.studentName;
+            // Only display the first two columns
+            for (let j = 0; j < Math.min(2, data[i].length); j++) {
+                const cell = document.createElement('td');
+                cell.textContent = data[i][j] !== undefined ? data[i][j] : '';
+                row.appendChild(cell);
+            }
             
-            const questionCell = document.createElement('td');
-            questionCell.textContent = record.questionCode;
+            // If the row has fewer than 2 columns, add empty cells
+            for (let j = data[i].length; j < 2; j++) {
+                const cell = document.createElement('td');
+                cell.textContent = '';
+                row.appendChild(cell);
+            }
             
-            const scoreCell = document.createElement('td');
-            scoreCell.textContent = record.score;
-            
-            const timeCell = document.createElement('td');
-            // Format the date for better readability
-            const date = new Date(record.submissionTime);
-            timeCell.textContent = date.toLocaleString();
-            
-            // Add cells to the row
-            row.appendChild(nameCell);
-            row.appendChild(questionCell);
-            row.appendChild(scoreCell);
-            row.appendChild(timeCell);
-            
-            // Add the row to the table
-            resultsBody.appendChild(row);
-        });
+            tbody.appendChild(row);
+        }
         
-        // Hide loading indicator and show results
-        loading.style.display = 'none';
-        resultsTable.style.display = 'table';
+        table.appendChild(tbody);
+        tableSection.appendChild(table);
+        
+        // Add the table section to the container
+        tablesContainer.appendChild(tableSection);
     }
 
     function showError(message) {
