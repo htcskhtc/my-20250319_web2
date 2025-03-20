@@ -187,6 +187,40 @@ document.addEventListener('DOMContentLoaded', function() {
         heading.textContent = 'Select a Student';
         selectorSection.appendChild(heading);
         
+        // Add this inside the createStudentSelector function, after creating the heading
+        const filterContainer = document.createElement('div');
+        filterContainer.className = 'filter-container';
+
+        const filterInput = document.createElement('input');
+        filterInput.type = 'text';
+        filterInput.id = 'studentFilter';
+        filterInput.className = 'student-filter';
+        filterInput.placeholder = 'Type to filter students...';
+
+        filterContainer.appendChild(filterInput);
+        selectorSection.appendChild(filterContainer);
+
+        // Add this after creating the filter input
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'clear-filter';
+        clearButton.innerHTML = '&times;';
+        clearButton.title = 'Clear filter';
+        clearButton.style.display = 'none';
+
+        clearButton.addEventListener('click', function() {
+            filterInput.value = '';
+            filterStudents('', select);
+            this.style.display = 'none';
+        });
+
+        filterInput.addEventListener('input', function() {
+            clearButton.style.display = this.value ? 'block' : 'none';
+            filterStudents(this.value.toLowerCase(), select);
+        });
+
+        filterContainer.appendChild(clearButton);
+
         // Create select element
         const select = document.createElement('select');
         select.id = 'studentSelect';
@@ -216,6 +250,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        // Add this before appending the select element
+        filterInput.addEventListener('input', function() {
+            filterStudents(this.value.toLowerCase(), select);
+        });
+
         selectorSection.appendChild(select);
         
         // Insert the selector at the beginning of tablesContainer
@@ -448,5 +487,38 @@ document.addEventListener('DOMContentLoaded', function() {
         loading.style.display = 'none';
         errorDiv.style.display = 'block';
         errorDiv.textContent = message;
+    }
+
+    // Function to filter students based on input text
+    function filterStudents(filterText, selectElement) {
+        const options = selectElement.querySelectorAll('option');
+        let visibleCount = 0;
+        
+        // Skip the first option (default "Select a student" option)
+        for (let i = 1; i < options.length; i++) {
+            const option = options[i];
+            const studentName = option.textContent.toLowerCase();
+            
+            if (filterText === '' || studentName.includes(filterText)) {
+                option.style.display = '';
+                visibleCount++;
+            } else {
+                option.style.display = 'none';
+            }
+        }
+        
+        // Show message if no students match
+        const existingMessage = document.getElementById('noMatchMessage');
+        if (visibleCount === 0 && filterText !== '') {
+            if (!existingMessage) {
+                const message = document.createElement('div');
+                message.id = 'noMatchMessage';
+                message.className = 'no-match-message';
+                message.textContent = 'No students match your filter';
+                selectElement.parentNode.appendChild(message);
+            }
+        } else if (existingMessage) {
+            existingMessage.remove();
+        }
     }
 });
