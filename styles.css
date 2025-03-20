@@ -205,11 +205,11 @@ thead th.student-score-column {
 
 /* Resize the layout tables sections */
 .layout-results {
-    flex: 0 0 calc(25% - 15px); /* Take up approximately 25% of the space, accounting for gap */
+    flex: 0 0 calc(48% - 15px); /* Change from 25% to 48% to have 2 tables per row */
     margin-top: 20px;
     margin-bottom: 15px;
     padding: 12px;
-    min-width: 200px; /* Ensure minimum width for readability */
+    min-width: 300px; /* Increased from 200px for better readability */
 }
 
 /* Adjust table sizing */
@@ -241,11 +241,11 @@ thead th.student-score-column {
 /* Media query for smaller screens */
 @media (max-width: 1024px) {
     .layout-results {
-        flex: 0 0 calc(50% - 15px); /* Take up 50% on medium-sized screens */
+        flex: 0 0 calc(48% - 15px); /* Keep consistent with above */
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .layout-results {
         flex: 0 0 100%; /* Full width on small screens */
     }
