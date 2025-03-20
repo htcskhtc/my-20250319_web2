@@ -4,9 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
     
-    // Add a variable to store processed data
+    // Add variables to store processed data
     let processedStudentData = null;
-
+    let uniqueStudents = [];
+    let layoutData = {};
+    
     loadDataBtn.addEventListener('click', loadExcelFiles);
 
     // Function to load and process both Excel files
@@ -15,6 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
         loading.style.display = 'block';
         tablesContainer.innerHTML = ''; // Clear previous tables
         errorDiv.style.display = 'none';
+        
+        // Reset data storage
+        processedStudentData = null;
+        uniqueStudents = [];
+        layoutData = {};
         
         // Create promises for both file loads
         const overallDataPromise = loadAndProcessOverallData();
@@ -25,8 +32,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(() => {
                 // Hide loading indicator when both are done
                 loading.style.display = 'none';
-                // Show a success message instead of displaying the data
-                showSuccess("Data processed successfully. The most recent student data has been stored.");
+                
+                // Create student selector if we have student data
+                if (processedStudentData && processedStudentData.length > 0) {
+                    createStudentSelector();
+                    showSuccess("Data processed successfully. Select a student to view their scores.");
+                } else {
+                    showError("No student data was found. Please check the data file.");
+                }
             })
             .catch(error => {
                 console.error('Error processing files:', error);
@@ -34,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Function to load and process the overallData.xlsx file (modified functionality)
+    // Function to load and process the overallData.xlsx file
     function loadAndProcessOverallData() {
         return fetch('overallData.xlsx')
             .then(response => {
@@ -69,22 +82,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Process and filter the data to keep only most recent attempts
                     processedStudentData = processStudentScores(jsonData);
                     
-                    // We no longer call createScoreTable here
-                    // Instead, just log a message to confirm data was processed
-                    console.log(`Processed ${processedStudentData.length} student records (most recent attempts only)`);
+                    // Extract unique student names
+                    uniqueStudents = [...new Set(processedStudentData.map(item => item.studentName))].sort();
                     
-                    // If you want to store this data for later server-side use, you could:
-                    // 1. Store in localStorage (client-side only)
-                    // localStorage.setItem('processedStudentData', JSON.stringify(processedStudentData));
-                    
-                    // 2. Send to a server endpoint (would require backend implementation)
-                    // Example only - not implemented:
-                    // fetch('/api/store-processed-data', {
-                    //     method: 'POST',
-                    //     headers: {'Content-Type': 'application/json'},
-                    //     body: JSON.stringify(processedStudentData)
-                    // });
-                    
+                    console.log(`Processed ${processedStudentData.length} student records with ${uniqueStudents.length} unique students`);
                 } catch (error) {
                     console.error('Error processing overallData.xlsx:', error);
                     showError('Error processing the overallData.xlsx file. Please check the format.');
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Function to load and process the outputLayout.xlsx file (new functionality)
+    // Function to load and process the outputLayout.xlsx file
     function loadAndProcessOutputLayout() {
         return fetch('outputLayout.xlsx')
             .then(response => {
@@ -113,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
                     
-                    // Process each sheet in the workbook
+                    // Process each sheet in the workbook and store the data
                     workbook.SheetNames.forEach(sheetName => {
                         const worksheet = workbook.Sheets[sheetName];
                         
@@ -124,6 +125,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.warn(`No data found in sheet: ${sheetName}`);
                             return;
                         }
+                        
+                        // Store layout data for later use
+                        layoutData[sheetName] = jsonData;
                         
                         // Create a table for this sheet (showing only first two columns)
                         createLayoutTable(sheetName, jsonData);
@@ -171,8 +175,196 @@ document.addEventListener('DOMContentLoaded', function() {
         // Convert map back to array
         return Array.from(mostRecentAttempts.values());
     }
+    
+    // Function to create a dropdown selector for students
+    function createStudentSelector() {
+        // Create a section for the student selector
+        const selectorSection = document.createElement('section');
+        selectorSection.className = 'student-selector';
+        
+        // Create heading
+        const heading = document.createElement('h2');
+        heading.textContent = 'Select a Student';
+        selectorSection.appendChild(heading);
+        
+        // Create select element
+        const select = document.createElement('select');
+        select.id = 'studentSelect';
+        select.className = 'student-select';
+        
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Select a student --';
+        select.appendChild(defaultOption);
+        
+        // Add an option for each student
+        uniqueStudents.forEach(studentName => {
+            const option = document.createElement('option');
+            option.value = studentName;
+            option.textContent = studentName;
+            select.appendChild(option);
+        });
+        
+        // Add event listener to handle student selection
+        select.addEventListener('change', function() {
+            const selectedStudent = this.value;
+            if (selectedStudent) {
+                updateTablesWithStudentScores(selectedStudent);
+            } else {
+                removeStudentScoreColumns();
+            }
+        });
+        
+        selectorSection.appendChild(select);
+        
+        // Insert the selector at the beginning of tablesContainer
+        if (tablesContainer.firstChild) {
+            tablesContainer.insertBefore(selectorSection, tablesContainer.firstChild);
+        } else {
+            tablesContainer.appendChild(selectorSection);
+        }
+    }
+    
+    // Function to update tables with selected student scores
+    function updateTablesWithStudentScores(studentName) {
+        // First remove any existing score columns
+        removeStudentScoreColumns();
+        
+        // Get all tables
+        const tables = document.querySelectorAll('.sheet-table');
+        
+        tables.forEach(table => {
+            const sheetName = table.closest('section').querySelector('h2').textContent;
+            const sheetData = layoutData[sheetName];
+            
+            if (!sheetData || sheetData.length < 2) return;
+            
+            // Add header for score column
+            const thead = table.querySelector('thead tr');
+            const scoreHeader = document.createElement('th');
+            scoreHeader.textContent = `${studentName}'s Score`;
+            scoreHeader.className = 'student-score-column';
+            thead.appendChild(scoreHeader);
+            
+            // Get question codes from the table (assuming they are in the second column)
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            rows.forEach((row, index) => {
+                // Get question code from the row (second column)
+                const questionCodeCell = row.querySelector('td:nth-child(2)');
+                if (!questionCodeCell) return;
+                
+                const questionCode = questionCodeCell.textContent.trim();
+                if (!questionCode) return;
+                
+                // Find the student's score for this question
+                const studentRecord = processedStudentData.find(item => 
+                    item.studentName === studentName && item.questionCode === questionCode);
+                
+                // Add a cell for the score
+                const scoreCell = document.createElement('td');
+                scoreCell.className = 'student-score-column';
+                
+                if (studentRecord) {
+                    scoreCell.textContent = studentRecord.score;
+                    // Add a class based on the score value for styling
+                    if (studentRecord.score > 0) {
+                        scoreCell.classList.add('positive-score');
+                    } else {
+                        scoreCell.classList.add('zero-score');
+                    }
+                } else {
+                    scoreCell.textContent = 'N/A';
+                    scoreCell.classList.add('no-score');
+                }
+                
+                row.appendChild(scoreCell);
+            });
+        });
+    }
+    
+    // Function to remove student score columns from all tables
+    function removeStudentScoreColumns() {
+        const scoreColumns = document.querySelectorAll('.student-score-column');
+        scoreColumns.forEach(column => column.remove());
+    }
 
-    // Function to create a table for the processed student scores (existing functionality)
+    // Function to create a table for the layout data
+    function createLayoutTable(sheetName, data) {
+        // Create a section for this table
+        const tableSection = document.createElement('section');
+        tableSection.className = 'results layout-results';
+        
+        // Create heading with sheet name
+        const heading = document.createElement('h2');
+        heading.textContent = sheetName;
+        tableSection.appendChild(heading);
+        
+        // Create table
+        const table = document.createElement('table');
+        table.className = 'sheet-table';
+        table.dataset.sheetName = sheetName;
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        // Use the first row as header, but only the first two columns
+        if (data[0] && data[0].length > 0) {
+            // Create headers for first two columns
+            for (let i = 0; i < Math.min(2, data[0].length); i++) {
+                const th = document.createElement('th');
+                th.textContent = data[0][i] || `Column ${i+1}`;
+                headerRow.appendChild(th);
+            }
+        } else {
+            // Default headers if first row is empty
+            const th1 = document.createElement('th');
+            th1.textContent = 'Column 1';
+            headerRow.appendChild(th1);
+            
+            const th2 = document.createElement('th');
+            th2.textContent = 'Column 2';
+            headerRow.appendChild(th2);
+        }
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        // Add data rows (skip the header row)
+        for (let i = 1; i < data.length; i++) {
+            const row = document.createElement('tr');
+            
+            // Only display the first two columns
+            for (let j = 0; j < Math.min(2, data[i].length); j++) {
+                const cell = document.createElement('td');
+                cell.textContent = data[i][j] !== undefined ? data[i][j] : '';
+                row.appendChild(cell);
+            }
+            
+            // If the row has fewer than 2 columns, add empty cells
+            for (let j = data[i].length; j < 2; j++) {
+                const cell = document.createElement('td');
+                cell.textContent = '';
+                row.appendChild(cell);
+            }
+            
+            tbody.appendChild(row);
+        }
+        
+        table.appendChild(tbody);
+        tableSection.appendChild(table);
+        
+        // Add the table section to the container
+        tablesContainer.appendChild(tableSection);
+    }
+
+    // Function to create a table for the processed student scores (kept for backward compatibility)
     function createScoreTable(processedData) {
         // Create a section for the table
         const tableSection = document.createElement('section');
@@ -238,78 +430,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             tbody.appendChild(row);
         });
-        
-        table.appendChild(tbody);
-        tableSection.appendChild(table);
-        
-        // Add the table section to the container
-        tablesContainer.appendChild(tableSection);
-    }
-    
-    // Function to create a table for the layout data (new functionality)
-    function createLayoutTable(sheetName, data) {
-        // Create a section for this table
-        const tableSection = document.createElement('section');
-        tableSection.className = 'results layout-results';
-        
-        // Create heading with sheet name
-        const heading = document.createElement('h2');
-        heading.textContent = sheetName;
-        tableSection.appendChild(heading);
-        
-        // Create table
-        const table = document.createElement('table');
-        table.className = 'sheet-table';
-        
-        // Create table header
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        
-        // Use the first row as header, but only the first two columns
-        if (data[0] && data[0].length > 0) {
-            // Create headers for first two columns
-            for (let i = 0; i < Math.min(2, data[0].length); i++) {
-                const th = document.createElement('th');
-                th.textContent = data[0][i] || `Column ${i+1}`;
-                headerRow.appendChild(th);
-            }
-        } else {
-            // Default headers if first row is empty
-            const th1 = document.createElement('th');
-            th1.textContent = 'Column 1';
-            headerRow.appendChild(th1);
-            
-            const th2 = document.createElement('th');
-            th2.textContent = 'Column 2';
-            headerRow.appendChild(th2);
-        }
-        
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-        
-        // Create table body
-        const tbody = document.createElement('tbody');
-        
-        // Add data rows (skip the header row)
-        for (let i = 1; i < data.length; i++) {
-            const row = document.createElement('tr');
-            
-            // Only display the first two columns
-            for (let j = 0; j < Math.min(2, data[i].length); j++) {
-                const cell = document.createElement('td');
-                cell.textContent = data[i][j] !== undefined ? data[i][j] : '';
-                row.appendChild(cell);
-            }
-            
-            // If the row has fewer than 2 columns, add empty cells
-            for (let j = data[i].length; j < 2; j++) {
-                const cell = document.createElement('td');
-                cell.textContent = '';
-                row.appendChild(cell);
-            }
-            
-            tbody.appendChild(row);
-        }
         
         table.appendChild(tbody);
         tableSection.appendChild(table);

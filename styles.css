@@ -154,3 +154,41 @@ footer {
 .sheet-table tr:hover {
     background-color: #e9f2f9;
 }
+
+/* Add these styles at the end of your existing CSS file */
+
+.student-selector {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.student-select {
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    min-width: 250px;
+    margin-top: 10px;
+}
+
+.positive-score {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.zero-score {
+    color: #e74c3c;
+}
+
+.no-score {
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.student-score-column {
+    background-color: #f8f9fa;
+}
+
+thead th.student-score-column {
+    background-color: #34495e;
+}
