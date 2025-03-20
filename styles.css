@@ -42,6 +42,7 @@ section {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+    font-size: 0.95em;
 }
 
 table, th, td {
@@ -130,4 +131,26 @@ footer {
 
 .score-table tbody tr:hover {
     background-color: #e3f2fd;
+}
+
+.layout-results {
+    margin-top: 40px;
+    border-top: 2px solid #e0e0e0;
+    padding-top: 30px;
+}
+
+.layout-results h2 {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 1.2em;
+}
+
+.sheet-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.sheet-table tr:hover {
+    background-color: #e9f2f9;
 }

@@ -4,17 +4,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
 
-    loadDataBtn.addEventListener('click', loadExcelFile);
+    loadDataBtn.addEventListener('click', loadExcelFiles);
 
-    // Function to load and process the Excel file
-    function loadExcelFile() {
+    // Function to load and process both Excel files
+    function loadExcelFiles() {
         // Show loading indicator
         loading.style.display = 'block';
         tablesContainer.innerHTML = ''; // Clear previous tables
         errorDiv.style.display = 'none';
         
-        // Fetch the Excel file from the server
-        fetch('overallData.xlsx')
+        // Create promises for both file loads
+        const overallDataPromise = loadAndProcessOverallData();
+        const outputLayoutPromise = loadAndProcessOutputLayout();
+        
+        // Process both files
+        Promise.all([overallDataPromise, outputLayoutPromise])
+            .then(() => {
+                // Hide loading indicator when both are done
+                loading.style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Error processing files:', error);
+                showError(`Error: ${error.message}`);
+            });
+    }
+    
+    // Function to load and process the overallData.xlsx file (existing functionality)
+    function loadAndProcessOverallData() {
+        return fetch('overallData.xlsx')
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Failed to load overallData.xlsx from server');
@@ -28,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Check if we have at least one sheet
                     if (workbook.SheetNames.length === 0) {
-                        showError('No sheets found in the Excel file');
+                        showError('No sheets found in the overallData.xlsx file');
                         return;
                     }
                     
@@ -40,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
                     if (jsonData.length === 0) {
-                        showError('No data found in the Excel file');
+                        showError('No data found in the overallData.xlsx file');
                         return;
                     }
                     
@@ -50,17 +67,55 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Create table with the processed data
                     createScoreTable(processedData);
                     
-                    // Hide loading indicator
-                    loading.style.display = 'none';
+                } catch (error) {
+                    console.error('Error processing overallData.xlsx:', error);
+                    showError('Error processing the overallData.xlsx file. Please check the format.');
+                    throw error;
+                }
+            });
+    }
+    
+    // Function to load and process the outputLayout.xlsx file (new functionality)
+    function loadAndProcessOutputLayout() {
+        return fetch('outputLayout.xlsx')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load outputLayout.xlsx from server');
+                }
+                return response.arrayBuffer();
+            })
+            .then(arrayBuffer => {
+                try {
+                    const data = new Uint8Array(arrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Check if we have sheets
+                    if (workbook.SheetNames.length === 0) {
+                        console.warn('No sheets found in the outputLayout.xlsx file');
+                        return;
+                    }
+                    
+                    // Process each sheet in the workbook
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        
+                        // Convert to JSON with headers (using header: 1 to get array of arrays)
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        if (jsonData.length === 0) {
+                            console.warn(`No data found in sheet: ${sheetName}`);
+                            return;
+                        }
+                        
+                        // Create a table for this sheet (showing only first two columns)
+                        createLayoutTable(sheetName, jsonData);
+                    });
                     
                 } catch (error) {
-                    console.error('Error processing file:', error);
-                    showError('Error processing the Excel file. Please check the format.');
+                    console.error('Error processing outputLayout.xlsx:', error);
+                    showError('Error processing the outputLayout.xlsx file. Please check the format.');
+                    throw error;
                 }
-            })
-            .catch(error => {
-                console.error('Error fetching file:', error);
-                showError(`Error loading the file: ${error.message}`);
             });
     }
 
@@ -99,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return Array.from(mostRecentAttempts.values());
     }
 
-    // Function to create a table for the processed student scores
+    // Function to create a table for the processed student scores (existing functionality)
     function createScoreTable(processedData) {
         // Create a section for the table
         const tableSection = document.createElement('section');
@@ -165,6 +220,78 @@ document.addEventListener('DOMContentLoaded', function() {
             
             tbody.appendChild(row);
         });
+        
+        table.appendChild(tbody);
+        tableSection.appendChild(table);
+        
+        // Add the table section to the container
+        tablesContainer.appendChild(tableSection);
+    }
+    
+    // Function to create a table for the layout data (new functionality)
+    function createLayoutTable(sheetName, data) {
+        // Create a section for this table
+        const tableSection = document.createElement('section');
+        tableSection.className = 'results layout-results';
+        
+        // Create heading with sheet name
+        const heading = document.createElement('h2');
+        heading.textContent = sheetName;
+        tableSection.appendChild(heading);
+        
+        // Create table
+        const table = document.createElement('table');
+        table.className = 'sheet-table';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        // Use the first row as header, but only the first two columns
+        if (data[0] && data[0].length > 0) {
+            // Create headers for first two columns
+            for (let i = 0; i < Math.min(2, data[0].length); i++) {
+                const th = document.createElement('th');
+                th.textContent = data[0][i] || `Column ${i+1}`;
+                headerRow.appendChild(th);
+            }
+        } else {
+            // Default headers if first row is empty
+            const th1 = document.createElement('th');
+            th1.textContent = 'Column 1';
+            headerRow.appendChild(th1);
+            
+            const th2 = document.createElement('th');
+            th2.textContent = 'Column 2';
+            headerRow.appendChild(th2);
+        }
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        // Add data rows (skip the header row)
+        for (let i = 1; i < data.length; i++) {
+            const row = document.createElement('tr');
+            
+            // Only display the first two columns
+            for (let j = 0; j < Math.min(2, data[i].length); j++) {
+                const cell = document.createElement('td');
+                cell.textContent = data[i][j] !== undefined ? data[i][j] : '';
+                row.appendChild(cell);
+            }
+            
+            // If the row has fewer than 2 columns, add empty cells
+            for (let j = data[i].length; j < 2; j++) {
+                const cell = document.createElement('td');
+                cell.textContent = '';
+                row.appendChild(cell);
+            }
+            
+            tbody.appendChild(row);
+        }
         
         table.appendChild(tbody);
         tableSection.appendChild(table);
