@@ -1,64 +1,59 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('fileUpload');
+    const loadDataBtn = document.getElementById('loadDataBtn');
     const resultsTable = document.getElementById('resultsTable');
     const resultsBody = document.getElementById('resultsBody');
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
 
-    fileInput.addEventListener('change', handleFileUpload);
+    loadDataBtn.addEventListener('click', loadDataFromServer);
 
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
-        
-        if (!file) return;
-
+    // Function to load data from server
+    function loadDataFromServer() {
         // Show loading indicator
         loading.style.display = 'block';
         resultsTable.style.display = 'none';
         errorDiv.style.display = 'none';
         
-        // Check if the file is an Excel file
-        if (!file.name.match(/\.(xlsx|xls)$/i)) {
-            showError('Please upload an Excel file (.xlsx or .xls)');
-            return;
-        }
-
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Assume the first sheet contains our data
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Convert to JSON
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                
-                if (jsonData.length === 0) {
-                    showError('No data found in the Excel file');
-                    return;
+        // Fetch the Excel file from the server
+        fetch('overallData.xlsx')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load the Excel file from server');
                 }
-                
-                // Process the data to keep only the most recent attempts
-                const processedData = processStudentData(jsonData);
-                
-                // Display the processed data
-                displayResults(processedData);
-                
-            } catch (error) {
-                console.error('Error processing file:', error);
-                showError('Error processing the Excel file. Please check the format.');
-            }
-        };
-        
-        reader.onerror = function() {
-            showError('Error reading the file');
-        };
-        
-        reader.readAsArrayBuffer(file);
+                return response.arrayBuffer();
+            })
+            .then(arrayBuffer => {
+                try {
+                    const data = new Uint8Array(arrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Assume the first sheet contains our data
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert to JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (jsonData.length === 0) {
+                        showError('No data found in the Excel file');
+                        return;
+                    }
+                    
+                    // Process the data to keep only the most recent attempts
+                    const processedData = processStudentData(jsonData);
+                    
+                    // Display the processed data
+                    displayResults(processedData);
+                    
+                } catch (error) {
+                    console.error('Error processing file:', error);
+                    showError('Error processing the Excel file. Please check the format.');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching file:', error);
+                showError(`Error loading the file: ${error.message}`);
+            });
     }
 
     function processStudentData(data) {
