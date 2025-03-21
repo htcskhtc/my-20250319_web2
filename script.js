@@ -321,7 +321,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add header for score column
             const thead = table.querySelector('thead tr');
             const scoreHeader = document.createElement('th');
-            scoreHeader.textContent = `${studentName}'s Score`;
+            
+            // Extract class and number from student name (e.g., "5E 02" from "5E 02 CHEN YANTONG MARY")
+            const shortName = extractClassAndNumber(studentName);
+            scoreHeader.textContent = `${shortName}'s Score`;
+            
             scoreHeader.className = 'student-score-column';
             thead.appendChild(scoreHeader);
             
@@ -586,5 +590,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         return 'Unknown'; // Default return if format doesn't match
+    }
+
+    // Add this new function to extract class and student number
+    function extractClassAndNumber(studentName) {
+        // Match the pattern like "5E 02" at the start of the name
+        const match = studentName.match(/^(\d[A-F]\s\d\d)/);
+        if (match) {
+            return match[1]; // Return the matched pattern
+        }
+        return studentName; // Fallback to the full name if pattern doesn't match
     }
 });
