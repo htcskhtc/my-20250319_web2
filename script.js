@@ -299,8 +299,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedStudent = this.value;
             if (selectedStudent) {
                 updateTablesWithStudentScores(selectedStudent);
+                createSummaryTable(selectedStudent); // Add this line to create summary table
             } else {
                 removeStudentScoreColumns();
+                createSummaryTable(null); // Add this line to remove summary table
             }
         });
         
@@ -323,6 +325,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTablesWithStudentScores(studentName) {
         // First remove any existing score columns
         removeStudentScoreColumns();
+        
+        // Create summary table with statistics for the selected student
+        createSummaryTable(studentName);
         
         // Get all tables
         const tables = document.querySelectorAll('.sheet-table');
@@ -727,4 +732,152 @@ document.addEventListener('DOMContentLoaded', function() {
     // Element.prototype.contains = function(text) {
     //     return this.textContent === text;
     // };
+
+    // Function to create a summary table with statistics for each dataset
+    function createSummaryTable(studentName) {
+        // Remove any existing summary table
+        const existingSummary = document.getElementById('summaryTableSection');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+
+        // If no student is selected, don't create a summary table
+        if (!studentName) return;
+        
+        // Create a section for the summary table
+        const summarySection = document.createElement('section');
+        summarySection.className = 'results';
+        summarySection.id = 'summaryTableSection';
+        
+        // Create heading
+        const heading = document.createElement('h2');
+        heading.textContent = 'Performance Summary';
+        summarySection.appendChild(heading);
+        
+        // Create table
+        const table = document.createElement('table');
+        table.className = 'sheet-table summary-table';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        // Add an empty cell for the first column (metrics labels)
+        const emptyHeader = document.createElement('th');
+        emptyHeader.textContent = 'Metrics';
+        headerRow.appendChild(emptyHeader);
+        
+        // Get all visible tables (only include tables that are currently visible)
+        const visibleTableSections = Array.from(document.querySelectorAll('.layout-results'))
+            .filter(section => section.style.display !== 'none');
+        
+        // Add headers for each visible table
+        visibleTableSections.forEach(section => {
+            const tableHeader = document.createElement('th');
+            const tableName = section.querySelector('h2').textContent;
+            tableHeader.textContent = tableName;
+            headerRow.appendChild(tableHeader);
+        });
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body with rows for each metric
+        const tbody = document.createElement('tbody');
+        
+        // Row 1: Average score
+        const avgRow = document.createElement('tr');
+        const avgLabel = document.createElement('td');
+        avgLabel.textContent = 'Average Score';
+        avgRow.appendChild(avgLabel);
+        
+        // Row 2: Percentage answered
+        const percentRow = document.createElement('tr');
+        const percentLabel = document.createElement('td');
+        percentLabel.textContent = 'Completion (%)';
+        percentRow.appendChild(percentLabel);
+        
+        // Row 3: Total questions
+        const totalRow = document.createElement('tr');
+        const totalLabel = document.createElement('td');
+        totalLabel.textContent = 'Total Questions';
+        totalRow.appendChild(totalLabel);
+        
+        // Calculate and add statistics for each table
+        visibleTableSections.forEach(section => {
+            const sheetName = section.querySelector('h2').textContent;
+            const table = section.querySelector('.sheet-table');
+            
+            // Get all question codes from this table
+            const questionCodes = [];
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const codeCell = row.querySelector('td:nth-child(2)');
+                if (codeCell && codeCell.textContent.trim()) {
+                    questionCodes.push(codeCell.textContent.trim());
+                }
+            });
+            
+            // Count total questions
+            const totalQuestions = questionCodes.length;
+            
+            // Find student's scores for questions in this table
+            let answeredQuestions = 0;
+            let totalScore = 0;
+            
+            questionCodes.forEach(code => {
+                const studentRecord = processedStudentData.find(item => 
+                    item.studentName === studentName && item.questionCode === code);
+                
+                if (studentRecord) {
+                    answeredQuestions++;
+                    totalScore += parseFloat(studentRecord.score) || 0;
+                }
+            });
+            
+            // Calculate average score (prevent division by zero)
+            const avgScore = answeredQuestions > 0 ? (totalScore / answeredQuestions).toFixed(2) : 'N/A';
+            
+            // Calculate percentage of questions answered
+            const percentAnswered = totalQuestions > 0 ? 
+                ((answeredQuestions / totalQuestions) * 100).toFixed(1) : '0.0';
+            
+            // Add cells to the rows
+            const avgCell = document.createElement('td');
+            avgCell.textContent = avgScore;
+            if (avgScore !== 'N/A' && parseFloat(avgScore) > 0) {
+                avgCell.classList.add('positive-score');
+            }
+            avgRow.appendChild(avgCell);
+            
+            const percentCell = document.createElement('td');
+            percentCell.textContent = `${percentAnswered}%`;
+            percentRow.appendChild(percentCell);
+            
+            const totalCell = document.createElement('td');
+            totalCell.textContent = totalQuestions;
+            totalRow.appendChild(totalCell);
+        });
+        
+        // Add rows to table body
+        tbody.appendChild(avgRow);
+        tbody.appendChild(percentRow);
+        tbody.appendChild(totalRow);
+        table.appendChild(tbody);
+        
+        summarySection.appendChild(table);
+        
+        // Insert the summary after the table selection UI, but before the tables
+        const tableSelectionSection = document.getElementById('tableSelectionSection');
+        if (tableSelectionSection) {
+            tablesContainer.insertBefore(summarySection, tableSelectionSection.nextSibling);
+        } else {
+            const studentSelector = document.querySelector('.student-selector');
+            if (studentSelector) {
+                tablesContainer.insertBefore(summarySection, studentSelector.nextSibling);
+            } else {
+                tablesContainer.appendChild(summarySection);
+            }
+        }
+    }
 });
