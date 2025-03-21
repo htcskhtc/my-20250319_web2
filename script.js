@@ -695,14 +695,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to toggle table visibility
     function toggleTableVisibility(sheetName, isVisible) {
-        const tableSection = document.querySelector(`.layout-results h2:contains("${sheetName}")`).closest('section');
-        if (tableSection) {
-            tableSection.style.display = isVisible ? '' : 'none';
+        // Find all the h2 elements in layout-results sections
+        const headings = document.querySelectorAll('.layout-results h2');
+        
+        // Loop through them to find the one with matching text
+        for (let i = 0; i < headings.length; i++) {
+            if (headings[i].textContent === sheetName) {
+                const tableSection = headings[i].closest('section');
+                if (tableSection) {
+                    tableSection.style.display = isVisible ? '' : 'none';
+                }
+                break;
+            }
         }
     }
     
+    // Delete or comment out this function
     // Helper function to find elements by text content (for toggleTableVisibility)
-    Element.prototype.contains = function(text) {
-        return this.textContent === text;
-    };
+    // Element.prototype.contains = function(text) {
+    //     return this.textContent === text;
+    // };
 });
