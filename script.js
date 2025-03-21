@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         createLayoutTable(sheetName, jsonData);
                     });
                     
+                    // Create table selection UI after all tables are processed
+                    createTableSelectionUI(Object.keys(layoutData));
+                    
                 } catch (error) {
                     console.error('Error processing outputLayout.xlsx:', error);
                     showError('Error processing the outputLayout.xlsx file. Please check the format.');
@@ -601,4 +604,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return studentName; // Fallback to the full name if pattern doesn't match
     }
+
+    // Function to create table selection UI
+    function createTableSelectionUI(sheetNames) {
+        if (!sheetNames || sheetNames.length === 0) return;
+        
+        // Create a section for table selection
+        const selectionSection = document.createElement('section');
+        selectionSection.className = 'table-selection';
+        selectionSection.id = 'tableSelectionSection';
+        
+        // Create heading
+        const heading = document.createElement('h2');
+        heading.textContent = 'Table Selection';
+        selectionSection.appendChild(heading);
+        
+        // Create description
+        const description = document.createElement('p');
+        description.textContent = 'Select which tables to display:';
+        selectionSection.appendChild(description);
+        
+        // Create container for checkboxes
+        const checkboxContainer = document.createElement('div');
+        checkboxContainer.className = 'checkbox-container';
+        
+        // Add "Select All" and "Deselect All" buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'selection-buttons';
+        
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.textContent = 'Select All';
+        selectAllBtn.className = 'selection-btn select-all';
+        selectAllBtn.addEventListener('click', function() {
+            const checkboxes = checkboxContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                toggleTableVisibility(checkbox.value, true);
+            });
+        });
+        
+        const deselectAllBtn = document.createElement('button');
+        deselectAllBtn.textContent = 'Deselect All';
+        deselectAllBtn.className = 'selection-btn deselect-all';
+        deselectAllBtn.addEventListener('click', function() {
+            const checkboxes = checkboxContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                toggleTableVisibility(checkbox.value, false);
+            });
+        });
+        
+        buttonContainer.appendChild(selectAllBtn);
+        buttonContainer.appendChild(deselectAllBtn);
+        selectionSection.appendChild(buttonContainer);
+        
+        // Add checkboxes for each table
+        sheetNames.forEach(sheetName => {
+            const checkboxDiv = document.createElement('div');
+            checkboxDiv.className = 'checkbox-item';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `table-${sheetName.replace(/\s+/g, '-')}`;
+            checkbox.value = sheetName;
+            checkbox.checked = true; // All tables visible by default
+            
+            checkbox.addEventListener('change', function() {
+                toggleTableVisibility(this.value, this.checked);
+            });
+            
+            const label = document.createElement('label');
+            label.htmlFor = checkbox.id;
+            label.textContent = sheetName;
+            
+            checkboxDiv.appendChild(checkbox);
+            checkboxDiv.appendChild(label);
+            checkboxContainer.appendChild(checkboxDiv);
+        });
+        
+        selectionSection.appendChild(checkboxContainer);
+        
+        // Insert the selection section after the student selector (if present) or at the beginning
+        const studentSelector = document.querySelector('.student-selector');
+        if (studentSelector) {
+            tablesContainer.insertBefore(selectionSection, studentSelector.nextSibling);
+        } else {
+            tablesContainer.insertBefore(selectionSection, tablesContainer.firstChild);
+        }
+    }
+    
+    // Function to toggle table visibility
+    function toggleTableVisibility(sheetName, isVisible) {
+        const tableSection = document.querySelector(`.layout-results h2:contains("${sheetName}")`).closest('section');
+        if (tableSection) {
+            tableSection.style.display = isVisible ? '' : 'none';
+        }
+    }
+    
+    // Helper function to find elements by text content (for toggleTableVisibility)
+    Element.prototype.contains = function(text) {
+        return this.textContent === text;
+    };
 });
