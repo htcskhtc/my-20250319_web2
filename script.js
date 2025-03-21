@@ -158,7 +158,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Process each row of data
         data.forEach(row => {
-            const studentName = row['Std Name'];
+            // Normalize the student name by trimming excess whitespace and normalizing case
+            const studentName = normalizeStudentName(row['Std Name']);
             const questionCode = row['Question Code'];
             const key = `${studentName}-${questionCode}`;
             const submissionTime = new Date(row['SubmissionTime']);
@@ -185,6 +186,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Convert map back to array
         return Array.from(mostRecentAttempts.values());
+    }
+
+    // Add this new function to normalize student names
+    function normalizeStudentName(name) {
+        if (!name) return '';
+        
+        // Remove extra spaces, normalize to consistent case
+        return name.trim()
+            .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+            .replace(/\u00A0/g, ' ') // Replace non-breaking spaces with regular spaces
+            .replace(/\u200B/g, ''); // Remove zero-width spaces
     }
     
     // Function to create a dropdown selector for students
